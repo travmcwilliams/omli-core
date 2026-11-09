@@ -1,0 +1,57 @@
+# Traffic-guard policy: measurable, loggable traffic/hardware rules
+# for granular admission of model calls by current usage and task criticality.
+#
+# ALL values here are data (Primitive 1): the gate (omli/gates/traffic.py) holds zero
+# domain constants. Immutable per version — never edit a published version in place;
+# publish a new one.
+#
+# Semantics (enforced by the parser, loudly):
+#   - priority_classes: higher rank = more critical. Names are what callers declare.
+#   - protected_priority: calls at/above this rank are NEVER deferred or downgraded;
+#     the parser rejects any rule that even claims to cover them (anti-inversion).
+#   - rules: evaluated in order, first match wins; all conditions in `when` must hold.
+#     An unmeasurable (missing) reading never satisfies a condition.
+#   - actions: defer (do not run now) | downgrade (run, and tell the caller to take a cheaper route).
+policy: traffic_guard
+version: 0.1.0
+
+priority_classes:
+  - { name: critical,    rank: 30 }   # human-blocking / integrity-relevant work
+  - { name: interactive, rank: 20 }   # a person is waiting on the answer
+  - { name: normal,      rank: 10 }   # ordinary chain steps
+  - { name: bulk,        rank: 0 }    # backfills, batch enrichment, background sweeps
+
+default_priority: normal
+protected_priority: critical
+
+rules:
+  # Saturated CPU: shed background work first, then ordinary chain steps.
+  - id: defer-bulk-on-cpu-pressure
+    action: defer
+    applies_to_max_priority: bulk
+    when: { cpu_percent_at_least: 80 }
+  - id: defer-normal-on-cpu-saturation
+    action: defer
+    applies_to_max_priority: normal
+    when: { cpu_percent_at_least: 93 }
+
+  # Queue flood: too many calls already in flight -> background work waits.
+  - id: defer-bulk-on-queue-flood
+    action: defer
+    applies_to_max_priority: bulk
+    when: { inflight_at_least: 3 }
+  - id: defer-normal-on-queue-flood
+    action: defer
+    applies_to_max_priority: normal
+    when: { inflight_at_least: 6 }
+
+  # Memory headroom: below these floors, even interactive work gets a downgrade decision, which
+  # a caller may answer with a smaller model or a tighter budget.
+  - id: downgrade-on-low-ram
+    action: downgrade
+    applies_to_max_priority: interactive
+    when: { ram_available_mb_below: 2048 }
+  - id: downgrade-on-low-vram
+    action: downgrade
+    applies_to_max_priority: interactive
+    when: { vram_available_mb_below: 1024 }

@@ -1,0 +1,38 @@
+# Scoring-domain reference pack — the DATA half of "pack thresholds through the PostGate".
+#
+# A scoring domain has the model emit a numeric score and lets a DETERMINISTIC gate accept
+# or reject on it (Primitive 2: an LLM is never the last decision-maker). The pack names the
+# field and the floor as data; core knows neither. See `Scoring` in omli/packs/schema.py and
+# the wiring in omli/agents/base.py (_build_candidate / _check_post) + omli/gates/post.py.
+#
+# Produces a WorkResult from a DecisionRecord. Parallels omli/defaults/example_pack.yaml but proves
+# the score-floor path rather than the plain schema path.
+
+name: scoring-readiness
+version: "0.1.0"
+identity: >
+  You score a software project's delivery readiness from 0.0 (nowhere near shippable) to
+  1.0 (ready to ship). Judge from the project's real context — README, layout, dependencies,
+  recent commits, and file counts by area. Return STRICT JSON only, with no prose outside it.
+
+prompt_template: |
+  Project context:
+  {input}
+
+  Return a JSON object of exactly this shape and nothing else:
+  {"score": <float between 0.0 and 1.0>, "text": "<one concrete sentence justifying the score>"}
+
+# The PostGate enforces both: `text` and `score` must be present (schema), and `score` must
+# clear the floor below (threshold). A model that omits the score fails schema; one that
+# scores low is routed to the escape hatch — neither can slip a low-readiness call through.
+required_output_fields:
+  - text
+  - score
+
+scoring:
+  score_field: score
+  threshold: 0.6
+
+# This id must exist in your model registry; tests/data/registry.yaml defines it for the tests.
+model_selection:
+  model_id: example-3b

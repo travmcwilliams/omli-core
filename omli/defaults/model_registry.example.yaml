@@ -1,0 +1,58 @@
+# OMLi Model Registry: the only place a concrete model is named. Packs select a model by model_id.
+# Immutable per registry_version: adopting or changing a model is a new version and sign-off.
+# Every local-* endpoint must be loopback (localhost, 127.0.0.0/8 or ::1); the parser rejects others.
+metadata:
+  registry_id: default_model_registry
+  registry_version: 1.0.0
+  authored_at: '2026-11-06T00:00:00Z'
+  authored_by: omli
+  status: staging
+  description: 'Example registry: a local model and a hosted placeholder, each naming an
+    adapter this package ships.'
+models:
+- model_id: example-local-4b
+  display_name: Example local 4B model
+  family: example-local
+  provider_kind: local-ollama
+  adapter: ollama
+  endpoint: http://localhost:11434
+  serving_tag: example-model:4b
+  pin:
+    ref: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    quant: Q4_K_M
+  reproducible: true
+  status: staging
+  capabilities:
+    context_window: 32768
+    max_output_tokens: 8192
+    native_tool_calling: true
+    parallel_tool_calls: true
+    structured_output: grammar
+    thinking_mode: true
+    vision: false
+  params_default:
+    temperature: 0.2
+    top_p: 0.9
+  test_suite_ref: suites/decision_suite@1 # a placeholder; no such suite ships here
+- model_id: hosted-burst
+  display_name: Hosted placeholder (burst)
+  family: hosted
+  provider_kind: openai-compatible
+  adapter: openai-compatible
+  endpoint: https://api.example.com/v1
+  api_key_env: HOSTED_MODEL_API_KEY
+  pin:
+    ref: hosted-model-2026-05
+    quant: null
+  reproducible: false
+  status: staging
+  capabilities:
+    context_window: 200000
+    max_output_tokens: 32768
+    native_tool_calling: true
+    parallel_tool_calls: true
+    structured_output: json_mode
+    thinking_mode: true
+    vision: false
+  params_default:
+    temperature: 0.3

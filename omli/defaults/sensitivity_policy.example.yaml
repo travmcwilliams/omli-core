@@ -1,0 +1,8 @@
+# Sensitivity policy pack. The core always knows `public`, `internal`, `local-only` and
+# `local-only:<scope>`. A deployment adds its own tags here, then calls
+# omli.sensitivity.activate_policy(load_policy(path)) at startup. A tag that no active policy names
+# is rejected when provenance is created. This example adds nothing.
+policy: sensitivity
+version: "0.1.0"
+known_labels: []          # extra labels with no route control
+local_model_only_tags: [] # extra tags that make any non-local model route illegal

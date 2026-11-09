@@ -1,0 +1,69 @@
+# The one neutral model registry the tests load. Placeholders only; not a recommendation.
+metadata:
+  registry_id: "test_registry"
+  registry_version: "1.0.0"
+  authored_at: "2026-11-06T00:00:00Z"
+  authored_by: "omli"
+  status: "staging"
+  description: "An offline echo model, a local Ollama model and a hosted placeholder."
+
+models:
+  - model_id: "echo"
+    display_name: "Echo (offline)"
+    family: "echo"
+    provider_kind: "openai-compatible"
+    adapter: "echo"
+    endpoint: "echo://offline"
+    pin: { ref: "echo-2026-11", quant: null }
+    reproducible: false
+    status: "staging"
+    capabilities:
+      context_window: 8192
+      max_output_tokens: 2048
+      native_tool_calling: false
+      parallel_tool_calls: false
+      structured_output: "none"
+      thinking_mode: false
+      vision: false
+    params_default: { temperature: 0.0 }
+
+  - model_id: "example-3b"
+    display_name: "Example 3B (local)"
+    family: "example"
+    provider_kind: "local-ollama"
+    adapter: "ollama"
+    endpoint: "http://localhost:11434"
+    serving_tag: "example-model:3b"
+    pin:
+      ref: "sha256:abababababababababababababababababababababababababababababababab"
+      quant: null
+    reproducible: true
+    status: "staging"
+    capabilities:
+      context_window: 131072
+      max_output_tokens: 2048
+      native_tool_calling: true
+      parallel_tool_calls: false
+      structured_output: "json_mode"
+      thinking_mode: false
+      vision: false
+    params_default: { temperature: 0.2, num_ctx: 8192, keep_alive: "30m" }
+
+  - model_id: "hosted-example"
+    display_name: "Hosted placeholder"
+    family: "hosted"
+    provider_kind: "openai-compatible"
+    adapter: "openai-compatible"
+    endpoint: "https://api.example.com/v1"
+    pin: { ref: "hosted-example-2026-11", quant: null }
+    reproducible: false
+    status: "staging"
+    capabilities:
+      context_window: 128000
+      max_output_tokens: 4096
+      native_tool_calling: true
+      parallel_tool_calls: true
+      structured_output: "json_mode"
+      thinking_mode: false
+      vision: false
+    params_default: { temperature: 0.0 }

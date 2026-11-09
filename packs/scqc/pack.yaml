@@ -1,0 +1,49 @@
+# SCQC critic pack — Self-Consistency / Quality Check (Primitives 1 & 2).
+#
+# A pack-configured
+# critic AGENT (omli/agents/base.py) that consumes a WorkResult and emits an OutcomeRecord
+# verdict. It is NOT an in-gate LLM: the critic's own model call is wrapped by the standard
+# pre/post gates, and the DETERMINISTIC PostGate — not the model — decides whether a passing
+# verdict is written (Primitive 2). A WorkResult whose quality clears the floor gets a
+# passing OutcomeRecord; one below it is routed to the escape hatch (no OutcomeRecord, a
+# blocked_post event, persisted if the event sink is on) for human review. No orchestrator, no core code: this is the
+# intended Primitive-1 seam — new behavior is a new pack, never forked agent code.
+#
+# The gated structured signal is the single numeric `quality` score; the verdict word and
+# rationale ride in `text` (the raw model output). The core (_build_candidate) copies only
+# `text`, `produced_by_pack`, `confidence`, `escalate` and the pack's `score_field` out of the
+# model's JSON, so `verdict` is not a separate payload field.
+
+name: scqc-critic
+version: "0.1.0"
+identity: >
+  You are a self-consistency and quality critic. You review another agent's WorkResult and
+  judge whether its conclusion is internally consistent, supported by its own cited context,
+  and free of unsupported leaps. You are adversarial by default: look for the reason it is
+  WRONG before you accept it. Return STRICT JSON only, with no prose outside it.
+
+prompt_template: |
+  WorkResult under review:
+  {input}
+
+  Judge it. Return a JSON object of exactly this shape and nothing else:
+  {"verdict": "pass" | "fail",
+   "quality": <float 0.0..1.0 — how well-supported and self-consistent the result is>,
+   "text": "<one sentence: the verdict and the single strongest reason for it>"}
+
+# The PostGate enforces both: `text` and `quality` must be present (schema), and `quality`
+# must clear the floor below (threshold). A model that omits the score fails schema; a
+# WorkResult judged below the floor is routed to the escape hatch — the critic cannot
+# rubber-stamp a weak result, and the model is never the last decision-maker on whether the
+# pass is recorded (Primitive 2).
+required_output_fields:
+  - text
+  - quality
+
+scoring:
+  score_field: quality
+  threshold: 0.6
+
+# This id must exist in your model registry; tests/data/registry.yaml defines it for the tests.
+model_selection:
+  model_id: example-3b

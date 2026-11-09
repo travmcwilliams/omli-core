@@ -1,0 +1,34 @@
+# Runtime output (OMLI_HOME defaults to the current directory)
+/var/
+/integrity/
+packs/staging/
+
+# Keys and secrets: never commit
+*.key
+*.pem
+.omli/
+.env
+.env.*
+
+# Python build and test output
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

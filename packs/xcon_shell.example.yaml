@@ -1,0 +1,86 @@
+# xcon_shell — a governed rule-based expert-system SHELL, expressed as OMLi data.
+#
+# The rule base is DATA in this
+# pack (Primitive 1), the inference is bracketed by deterministic gates (Primitive 2),
+# and the conclusion is emitted as a DecisionRecord in the append-only artifact chain
+# with the fired-rule trace + this pack's version stamped into provenance (Primitives
+# 3 & 4). The trace rides in the payload text when the model supplies one: `required_output_fields`
+# below does not check its shape, so a model can omit it. `version` tells an auditor which
+# rule base was in force.
+#
+# The narrow demo domain is governance-triage of an intake: given a
+# raw intake, conclude which role should own it and whether a guardrail gate must
+# fire, with a combined certainty factor. All the domain lives here as data;
+# the core (omli/) stays generic (tests/test_core_has_no_domain.py checks every Python file under omli/ for a
+# list of domain terms; it is a tripwire, not a proof).
+#
+# Immutable per version. To change a rule, publish a new version — never edit this one.
+
+name: xcon_shell
+version: "0.1.0"
+
+identity: |
+  You are a GOVERNED rule-based expert-system shell that triages an intake.
+  You do NOT decide whether anything happens — deterministic gates do that before and after
+  you. You only apply the rule base you are given and return a single JSON object. Every
+  conclusion MUST cite the exact rules it fired. When the evidence is weak, report a LOW
+  certainty rather than guessing with false confidence — a low certainty is routed to the
+  escape hatch by the gate, which is correct behavior, not a failure.
+
+# The rule base lives here as pack DATA (this is the "rules-as-data" of Primitive 1).
+# `{input}` is the one required placeholder — the rendered intake is spliced in at call time.
+prompt_template: |
+  RULE BASE (evaluate every rule; combine certainty factors; cite each rule you fire):
+    R1  IF the intake mentions confidential or do-not-share data   THEN sensitivity = high              (cf 0.90)
+    R2  IF the intake mentions personal data / customer records    THEN sensitivity = high              (cf 0.80)
+    R3  IF sensitivity = high                                      THEN owning_role = data-reviewer   (cf 0.90)
+    R4  IF the intake is a market / competitor / pricing question  THEN owning_role = market-analysis (cf 0.70)
+    R5  IF the intake is an architecture / RAG / integration ask   THEN owning_role = architect     (cf 0.70)
+    R6  IF the intake is vague or underspecified                   THEN owning_role = intake-coordinator     (cf 0.60)
+    R7  IF sensitivity = high  OR  the action touches production   THEN guardrail_gate = REQUIRED       (cf 0.95)
+    R8  IF no rule above matches the intake                        THEN escalate = true                 (cf 0.30)
+
+  Return ONLY this JSON object and nothing else:
+    {
+      "conclusion": "<owning_role>; guardrail_gate=<REQUIRED|not-required>",
+      "fired_rules": ["R1: mentions confidential data -> sensitivity=high", "R3: sensitivity=high -> data-reviewer", ...],
+      "certainty": <combined certainty factor, 0.0 - 1.0>,
+      "confidence": <0.0 - 1.0>,
+      "escalate": <true|false>
+    }
+
+  INTAKE TO TRIAGE:
+  {input}
+
+# The PostGate enforces these field names on the candidate payload. The core always puts
+# `text` (the raw model output) and `produced_by_pack` into that payload, so a valid
+# DecisionRecord always carries the rendered answer and the pack stamp.
+required_output_fields:
+  - text
+  - produced_by_pack
+
+# `scoring` names the certainty factor the PostGate floors deterministically. An
+# output whose combined certainty is below the threshold is routed to the escape hatch
+# (and, via model_selection.escalation below, may retry once on a stronger model). The
+# field NAME is pack data; the core never hardcodes it (Primitive 1).
+scoring:
+  score_field: certainty
+  threshold: 0.6
+
+# A generic confidence floor common to every pack. Both floors apply: an output must clear
+# the certainty floor above AND, when it reports a confidence, this one. A reported confidence
+# that is not a finite number is rejected.
+thresholds:
+  min_confidence: 0.6
+
+# Both ids must exist in the model registry the pack runs against. The shipped example
+# registry (omli/defaults/model_registry.example.yaml) defines the primary id but not the
+# escalation id, so a registry that runs this pack must add it. The shell names NO model: it
+# selects one by id, and the registry is the only place a concrete model is named. Bounded
+# escalation: on a gate rejection it retries ONCE on a stronger model, then stops.
+model_selection:
+  model_id: example-local-4b
+  escalation:
+    model_id: hosted-escalation
+    trigger: gate_rejection
+    max_escalations: 1

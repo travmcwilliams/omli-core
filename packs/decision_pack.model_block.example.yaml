@@ -1,0 +1,28 @@
+# Example pack with a model block.
+# The pack names its model only by `model_id`; the Router resolves it against the
+# registry and validates `model_requirements` ⊆ the entry's capabilities when an Agent is
+# constructed (or `validate_packs` runs).
+name: "decision_example"
+version: "0.1.0"
+identity: "A decision agent that selects a route for a canonical input."
+prompt_template: |
+  Decide the route for:
+  {input}
+required_output_fields:
+  - text
+  - produced_by_pack
+thresholds:
+  min_confidence: 0.6
+
+model_selection:
+  model_id: "example-local-4b" # references a ModelRegistry entry by id
+  escalation: # bounded hand-off to a bigger model on a deterministic trigger
+    model_id: "hosted-burst"
+    trigger: "gate_rejection" # gate_rejection | low_confidence | explicit_flag
+    max_escalations: 1
+
+model_requirements: # Router enforces these against the registry entry and raises on a mismatch
+  native_tool_calling: true
+  min_context_window: 16000
+  structured_output: "json_mode" # entry must offer json_mode OR the stronger grammar
+  vision: false

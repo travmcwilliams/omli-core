@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,sign]"
+
+      - name: Test
+        run: python -m pytest -q -rs
+
+      - name: Walkthrough
+        run: python examples/walkthrough.py
+
+  wheel:
+    name: Install from wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build, install and run the wheel from an empty directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          python -m venv /tmp/wheelenv
+          /tmp/wheelenv/bin/pip install dist/*.whl
+          mkdir /tmp/empty
+          cd /tmp/empty
+          # Prove the installed wheel, not the checkout, is what runs.
+          /tmp/wheelenv/bin/python -c "import omli, sys; print(omli.__file__); sys.exit('omli imported from the checkout' if '$GITHUB_WORKSPACE' in omli.__file__ else 0)"
+          /tmp/wheelenv/bin/python -m omli.connections
+          /tmp/wheelenv/bin/python "$GITHUB_WORKSPACE/examples/walkthrough.py"
+          test -z "$(ls -A /tmp/empty)"

@@ -1,0 +1,24 @@
+# Example config pack — domain logic as DATA, not code (Primitive 1).
+#
+# This is the seam: everything domain-specific (identity, prompt, thresholds, required
+# output) lives here. Swapping this file for another vertical's pack changes behavior
+# without touching anything under omli/. To add a domain, add a pack like this one.
+
+name: example
+version: "0.1.0"
+identity: >
+  A neutral demonstration agent that restates its input. It exists only to prove the
+  core/pack seam and the gate-wrapped pipeline end to end.
+
+prompt_template: |
+  Summarize the following canonical input in one line:
+  {input}
+
+# The PostGate enforces that every model output carries these fields.
+required_output_fields:
+  - text
+  - produced_by_pack
+
+# Domain thresholds live in the pack, never in core or gate code.
+thresholds:
+  min_confidence: 0.5

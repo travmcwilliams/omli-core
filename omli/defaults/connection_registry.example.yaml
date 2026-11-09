@@ -1,0 +1,418 @@
+# OMLi Connection Registry: EXAMPLE, validated by omli/connections/schema.py. Every value is a
+# placeholder. This is the only place a concrete external target and its credential_ref are named.
+#
+# Immutable per version: changing a selection, credential, blast radius or approval means a new
+# version and sign-off (draft -> staging -> production). The selection block is the checklist: each
+# resource is a row a human ticks (selected: true) or leaves unticked.
+#
+# DEFAULT-DENY: unticked rows are not touchable. forbidden_paths and the blast-radius caps override
+# any ticked row. A change-class op (propose-pr / write-branch) requires `read` on the same row.
+
+metadata:
+  registry_id: "default_connection_registry"
+  registry_version: "1.0.0"
+  authored_at: "2026-11-06T00:00:00Z"
+  authored_by: "omli"
+  description: "Placeholder external targets. Default-deny; PR-only."
+  status: "draft" # draft -> staging -> production (sign-off) -> deprecated
+
+connections:
+  # git-repo: a repository OMLi may mirror and propose changes to.
+  - connection_id: "example_repo"
+    target:
+      kind: "git-repo"
+      identifier: "example-org/example-repo"
+      default_branch: "main"
+      credential_ref: "secret://connections/example_repo/app_token" # ref only, never inline
+      principal: "example-org" # who grants, scopes and revokes the install
+      sensitivity_allowed: ["public"] # fails closed on anything not listed
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "src/services/**"
+          kind: "path-glob"
+          label: "Service modules"
+          selected: true # may mirror and propose changes
+          operations: ["read", "propose-pr"]
+
+        - id: "src/lib/**"
+          kind: "path-glob"
+          label: "Shared library"
+          selected: true # read-only mirror
+          operations: ["read"]
+
+        - id: "src/internal/**"
+          kind: "path-glob"
+          label: "Internal modules"
+          selected: false # listed but unticked: fully denied
+          operations: []
+
+        - id: "configs/*.yaml"
+          kind: "path-glob"
+          label: "Run configs"
+          selected: true
+          operations: ["read", "propose-pr"]
+
+        - id: "omli/*"
+          kind: "branch"
+          label: "OMLi-namespaced branches"
+          selected: true # may push only to its own branch namespace
+          operations: ["read", "write-branch", "propose-pr"]
+
+        - id: "main"
+          kind: "branch"
+          label: "Main branch"
+          selected: false # never touch main directly: PR and human merge only
+          operations: []
+
+    blast_radius:
+      max_files_per_change: 15
+      max_lines_per_change: 600
+      forbidden_paths: # hard deny regardless of selection
+        - "**/secrets/**"
+        - "**/*.env"
+        - ".github/workflows/**"
+        - "**/credentials*"
+      direct_push: false # PR-only, structurally
+      destructive_ops: false # no deletes or history rewrite
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "out-of-selection"
+        - "blast-radius-exceeded"
+        - "forbidden-path"
+        - "sensitivity-mismatch"
+        - "change-class-op" # escalate on the first change-class op (opt-in)
+
+  # http-browse: anonymous, read-only browsing. The domain allowlist is the deny list.
+  - connection_id: "web_research"
+    target:
+      kind: "http-browse"
+      identifier: "open-web"
+      principal: "example-owner" # who grants and revokes this browse profile
+      sensitivity_allowed: ["public"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "docs.example.com"
+          kind: "domain"
+          label: "Documentation site"
+          selected: true
+          operations: ["read"]
+
+        - id: "*.example.org"
+          kind: "domain"
+          label: "Subdomains (the apex needs its own row)"
+          selected: true
+          operations: ["read"]
+
+        - id: "example.org"
+          kind: "domain"
+          label: "Apex: '*.x' never matches 'x' itself"
+          selected: true
+          operations: ["read"]
+
+        - id: "news.example.net"
+          kind: "domain"
+          label: "Unticked: never read"
+          selected: false
+          operations: []
+
+    blast_radius:
+      max_pages_per_session: 40 # browse-shaped caps replace the file and line caps
+      max_captures_per_domain: 15
+      forbidden_paths: # hard-deny domain patterns: these win over any ticked row
+        - "*.bank*"
+        - "mail.*"
+        - "*.mail.*"
+        - "*health*"
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "blast-radius-exceeded"
+
+  # container-egress: a sandbox's network boundary. A host absent from ticked rows is unreachable.
+  - connection_id: "sandbox_egress"
+    target:
+      kind: "container-egress"
+      identifier: "sandbox-egress"
+      principal: "example-owner" # who grants, scopes and revokes the sandbox's egress
+      sensitivity_allowed: ["public"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "api.example.com"
+          kind: "domain"
+          label: "Model API"
+          selected: true
+          operations: ["connect"]
+
+        - id: "git.example.com"
+          kind: "domain"
+          label: "Git host"
+          selected: true
+          operations: ["connect"]
+
+        - id: "*.example-cdn.com"
+          kind: "domain"
+          label: "Content hosts (the apex needs its own row)"
+          selected: true
+          operations: ["connect"]
+
+        - id: "pkg.example.com"
+          kind: "domain"
+          label: "Unticked: package index"
+          selected: false
+          operations: []
+
+    blast_radius:
+      forbidden_paths: # hard-deny domain patterns
+        - "169.254.169.254" # cloud metadata address
+        - "*.internal" # internal hostnames, including metadata hosts under .internal
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "out-of-selection"
+        - "forbidden-path"
+
+  # slack: which channels a bot may post to or read back. 'post' does not imply 'read-thread'.
+  - connection_id: "team_slack"
+    target:
+      kind: "slack"
+      identifier: "slack:example-workspace"
+      credential_ref: "secret://connections/team_slack/bot_token" # ref only, never inline
+      principal: "example-owner"
+      sensitivity_allowed: ["public", "internal"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "#team-notes"
+          kind: "channel"
+          label: "Post-only channel"
+          selected: true
+          operations: ["post"]
+
+        - id: "CEXAMPLE001"
+          kind: "channel"
+          label: "Placeholder channel id: the only channel read back"
+          selected: true
+          operations: ["post", "read-thread"]
+
+        - id: "#general"
+          kind: "channel"
+          label: "Unticked: never posted to"
+          selected: false
+          operations: []
+
+    blast_radius:
+      forbidden_paths:
+        - "#incidents*"
+        - "*-private"
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "out-of-selection"
+        - "forbidden-path"
+
+  # smtp: which recipients a mailer may email, with a daily ceiling.
+  - connection_id: "team_email"
+    target:
+      kind: "smtp"
+      identifier: "smtp:example-mailbox"
+      credential_ref: "secret://connections/team_email/app_password" # ref only, never inline
+      principal: "example-owner"
+      sensitivity_allowed: ["public", "internal"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "owner@example.com"
+          kind: "address"
+          label: "Owner inbox"
+          selected: true
+          operations: ["send-email"]
+
+        - id: "owner@example.org"
+          kind: "address"
+          label: "Second owner inbox"
+          selected: true
+          operations: ["send-email"]
+
+        - id: "*@example.com"
+          kind: "address"
+          label: "Any address at the domain (subdomains need their own row)"
+          selected: true
+          operations: ["send-email"]
+
+        - id: "*@example.net"
+          kind: "address"
+          label: "Unticked: never emailed"
+          selected: false
+          operations: []
+
+    blast_radius:
+      max_sends_per_day: 50
+      forbidden_paths:
+        - "*@*.restricted.example.com"
+        - "*+noreply@*"
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "out-of-selection"
+        - "blast-radius-exceeded"
+        - "forbidden-path"
+
+  # graph-mail: the same mail intent as smtp, authenticated with an app client secret. The identifier carries placeholder
+  # tenant and app GUIDs; only the client secret is a secret:// ref.
+  - connection_id: "team_graph_mail"
+    target:
+      kind: "graph-mail"
+      identifier: "graph-mail:00000000-0000-0000-0000-000000000000:00000000-0000-0000-0000-000000000000"
+      credential_ref: "secret://connections/team_graph_mail/client_secret" # ref only, never inline
+      principal: "sender@example.com" # the sending mailbox
+      sensitivity_allowed: ["public", "internal"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "owner@example.com"
+          kind: "address"
+          label: "Owner inbox"
+          selected: true
+          operations: ["send-email"]
+
+        - id: "owner@example.org"
+          kind: "address"
+          label: "Second owner inbox"
+          selected: true
+          operations: ["send-email"]
+
+        - id: "*@example.net"
+          kind: "address"
+          label: "Unticked: never emailed"
+          selected: false
+          operations: []
+
+    blast_radius:
+      max_sends_per_day: 50
+      forbidden_paths:
+        - "*@*.restricted.example.com"
+        - "*+noreply@*"
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "out-of-selection"
+        - "blast-radius-exceeded"
+        - "forbidden-path"
+
+  # http-browse with a credential: a read-only data API. An unlisted host hard-denies.
+  - connection_id: "data_api"
+    target:
+      kind: "http-browse"
+      identifier: "example-data-api"
+      credential_ref: "secret://connections/data_api/api_key" # ref only, never inline
+      principal: "example-owner"
+      sensitivity_allowed: ["public"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "data.example.com"
+          kind: "domain"
+          label: "Data API"
+          selected: true
+          operations: ["read"]
+
+    blast_radius:
+      max_pages_per_session: 50
+      max_captures_per_domain: 500
+      forbidden_paths:
+        - "*.internal"
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "blast-radius-exceeded"
+
+  # http-service: a hosted API. Unticked endpoints stay denied until reviewed.
+  - connection_id: "model_api"
+    target:
+      kind: "http-service"
+      identifier: "api.example.com"
+      credential_ref: "secret://connections/model_api/api_key" # ref only, never inline
+      principal: "example-owner"
+      sensitivity_allowed: ["public"]
+
+    selection:
+      mode: "allowlist"
+      resources:
+        - id: "/v1/generate"
+          kind: "endpoint"
+          label: "Generation endpoint"
+          selected: true
+          operations: ["read"]
+
+        - id: "/v1/models"
+          kind: "endpoint"
+          label: "Model listing"
+          selected: true
+          operations: ["read"]
+
+        - id: "/v1/files"
+          kind: "endpoint"
+          label: "Unticked: file upload"
+          selected: false
+          operations: []
+
+    blast_radius:
+      max_files_per_change: null
+      max_lines_per_change: null
+      forbidden_paths:
+        - "/v1/files/**"
+      direct_push: false
+      destructive_ops: false
+
+    approval:
+      mode: "pr-only"
+      required_reviewers: ["example-owner"]
+      auto_merge: false
+      escalate_on:
+        - "out-of-selection"
+        - "forbidden-path"
+        - "blast-radius-exceeded"
