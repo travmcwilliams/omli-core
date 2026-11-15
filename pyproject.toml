@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omli"
-version = "0.1.0"
+version = "0.2.0"
 description = "OMLi (Open Model Local integrator): shared core + config packs"
 readme = "README.md"
 license = "Apache-2.0"
@@ -15,16 +15,40 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+# httpx2 backs Starlette's test client (Starlette 1.2 and later); see filterwarnings below.
+dev = ["pytest>=7.0", "httpx2>=2.0"]
 # ed25519 head signing. Optional: without it, an existing signature reports `unverifiable`.
 sign = ["cryptography>=41"]
+# The local UI server (omli-ui). Its key login needs ed25519, hence cryptography.
+ui = ["fastapi>=0.110", "starlette>=1.2", "uvicorn>=0.29", "websockets>=12", "cryptography>=41"]
+# Reading dropped PDF, Word and Excel files in the Mind-map dump zone. Optional: without it
+# the dump refuses those types with a message naming the missing library.
+files = ["pypdf>=4", "python-docx>=1.1", "openpyxl>=3.1"]
+
+# The UI's start command: `omli-ui serve`. It needs the ui extra; without it the command says
+# which package is missing. (`python -m omli.ui` also works, with the limit SECURITY.md states.)
+[project.scripts]
+omli-ui = "omli.ui.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["omli*"]
 
 [tool.setuptools.package-data]
 "omli.defaults" = ["*.yaml"]
+"omli.boards" = ["starter/*.jsonl"]
+"omli.ui.static.mindmap" = ["*.html", "*.js", "*.css", "js/*.js", "js/vendor/*", "icons/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# No cache folder in the checkout.
+addopts = "-p no:cacheprovider"
+filterwarnings = [
+    # Starlette's test client falls back to plain httpx with this warning. The UI tests must
+    # run on httpx2, so the fallback fails the run instead of warning.
+    "error:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
+    # An unclosed file or socket fails the run. A ResourceWarning raised while an object is
+    # collected reaches pytest as an unraisable-exception warning, so both are errors.
+    "error::ResourceWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+]

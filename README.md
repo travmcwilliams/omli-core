@@ -17,7 +17,7 @@ OMLi is a Python library with two command-line entry points:
 - `python -m omli.integrity`: seal and verify a log, and manage signing keys;
 - `python -m omli.connections`: a dry run of the connection scope gate.
 
-The repository also has an example script, `examples/walkthrough.py`. There is no web UI and no hosted service. OMLi runs on your machine with a local model server such as [Ollama](https://ollama.com), or with an OpenAI-compatible endpoint you configure.
+The repository also has an example script, `examples/walkthrough.py`. There is no hosted service; an optional local web UI is described [below](#the-local-ui-and-the-mind-map). OMLi runs on your machine with a local model server such as [Ollama](https://ollama.com), or with an OpenAI-compatible endpoint you configure.
 
 ## The problem
 
@@ -159,11 +159,61 @@ In the tampered case the output also prints `anchor: ANCHORED`. That is correct:
 
 To use a real local model, install Ollama, pull a model, and point a registry entry at `http://localhost:11434`. Set `OMLI_LIVE_OLLAMA=1` to run the live test. It still skips when no server is reachable or no model is pulled.
 
+## The local UI and the Mind-map
+
+OMLi includes an optional local web UI with one screen in this release: the Mind-map. It needs the `ui` extra: `pip install "omli[ui]"`. Reading dropped PDF, Word and Excel files also needs the `files` extra: `pip install "omli[ui,files]"`.
+
+### Start it
+
+```
+omli-ui init      # once: make your own login key
+omli-ui serve     # start the server; it prints its address
+omli-ui login     # in another terminal: sign the browser in
+```
+
+- Run it as `omli-ui`. The same program also runs as `python -m omli.ui`, but Python then loads modules from the folder you run it in, so use that form only in a folder you trust.
+- `omli-ui serve` prints the server's address, the Mind-map's address and the data folder.
+- `omli-ui login` hands the browser a one-time sign-in link through a page file only you can read, and removes that file when the link expires (30 seconds), so the link never appears on a command line.
+- The server listens on 127.0.0.1 only, on port 8765 unless you pass `--port`. There is no option to listen on another address or to turn login off.
+- The data folder is `OMLI_HOME` when it is set; otherwise it is `.omli/data` in your home folder, never the folder you start the server in. Boards are kept under `boards/` in the data folder, one append-only log per board.
+- Your private login key stays in your home folder, as `ui_login.key` in its `.omli` folder, unless `OMLI_UI_KEY` names another path.
+
+### First run
+
+- Until a login key exists, every page shows the setup page, which names the command that makes one.
+- The Mind-map opens on a starter board, "How OMLi works", which a first start writes under `boards/` in the data folder. An existing board of that name is never replaced.
+- With no model configured, Ask and Generate, the board reading and the retrieval run are shown switched off, with a line that says how to configure a model.
+
+### Use a model
+
+- Ask, Generate, the board reading, dropped-file sorting and the retrieval summary each make one model call.
+- Each call goes through `Agent.run`: a deterministic gate before the model and another after it.
+- The model comes from your registry at `models/registry.yaml` in the data folder, from the entry whose `model_id` is `mindmap-assistant`.
+- Ask, Generate and the board reading save the board first and read the saved board. The retrieval run reads the ladder as it is on screen, and dropped-file sorting reads only the dropped file.
+- Saving a board never calls a model.
+- Content tagged `local-only` is refused for a model whose provider kind is not local.
+
+### What the board records
+
+- A save sends the whole board, and the server records only the operations that changed it, in one write. A save that changes nothing writes nothing.
+- Restoring a checkpoint appends a restore operation; no earlier operation is changed.
+- A checkpoint is recorded only when you ask for one.
+- The canvas background is a setting kept in your browser only, not in the board.
+- Freehand ink and scratch covers are not in this release.
+
+### Outside requests
+
+- The page loads nothing from another host: its scripts, styles, icons and the Rough.js library ship inside the package.
+- The server sends a Content-Security-Policy that allows scripts, connections, images and styles from its own origin only, plus `data:` images and inline styles.
+- A board image shows only when it is stored in the board; an image address on another host shows a placeholder, and clicking it opens that address in a new tab.
+- Retrieval reads only folders on your project list. Inside them it never reads hidden folders or files, `.git`, files whose names look like keys, certificates, environment files or credential and secret stores (the patterns are in the `mindmap` pack), files over 200,000 bytes, or the data folder. It reads only regular files, and visits each real folder once in a request, so a junction or link loop ends and sources that overlap are read once. In one request it examines no more than 5,000 folders and looks at no more than 2,000 files across all sources, and enters a folder only when its real path is no more than 24 folders below the source; all three limits are in the pack.
+- A model call goes to whatever endpoint your registry names, which may be a hosted service.
+
 ## Configuration
 
 | Variable | Purpose |
 |---|---|
-| `OMLI_HOME` | Root for OMLi's default writes. When unset, the current directory; never the package location. The one exception is the private signing key (next rows). Explicit path arguments always win. |
+| `OMLI_HOME` | Root for OMLi's default writes. When unset, the current directory; never the package location. (The local UI is the exception: when unset, it uses `.omli/data` in your home folder.) The one exception is the private signing key (next rows). Explicit path arguments always win. |
 | `OMLI_SEAL_KEY` | Where `keygen` writes, and signing reads, the private key. Default `~/.omli/seal.key`, kept outside any project folder so it is not committed by accident. |
 | `OMLI_SECRETS_DIR` | Directory for `secret://` files. With neither it nor `OMLI_HOME` set, only `OMLI_SECRET_*` environment variables resolve. |
 | `OMLI_CONNECTION_REGISTRY` | The connection registry to use. Lookup order: this variable, then `$OMLI_HOME/packs/connection_registry.yaml` if it exists, then the example shipped in the package. |

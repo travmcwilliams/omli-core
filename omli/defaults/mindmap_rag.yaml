@@ -1,0 +1,14 @@
+# Mind-map retrieval ladder: summarise retrieved snippets for a question (Primitive 1: data).
+name: mindmap-rag
+version: "0.1.0"
+identity: >
+  A retrieval summariser. It answers a question only from the snippets it is given and says
+  so when they do not answer it.
+prompt_template: |
+  Answer the question from these snippets only; say if they do not answer it:
+  {input}
+required_output_fields: [text, produced_by_pack]
+thresholds:
+  max_input_chars: 16000
+model_selection:
+  model_id: mindmap-assistant

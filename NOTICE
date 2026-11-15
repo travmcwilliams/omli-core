@@ -3,3 +3,18 @@ Copyright 2026 Travis Williams
 
 This product is licensed under the Apache License, Version 2.0.
 See the LICENSE file for the full text.
+
+Third-party components
+----------------------
+
+The Mind-map page (omli/ui/static/mindmap/) ships these files unchanged, each with
+its licence beside it:
+
+- Rough.js 4.6.6 (bundled/rough.esm.js), MIT License, Copyright (c) 2019 Preet Shihn.
+  File: js/vendor/rough.esm.js; licence: js/vendor/rough.LICENSE.
+- Tabler Icons (10 icons: alert-triangle, bulb, chart-line, cpu, database, file-text,
+  question-mark, shield-lock, target, users), MIT License, Copyright (c) 2020-2026
+  Pawel Kuna. Files: icons/*.svg; licence: icons/LICENSE.
+  Version: release 3.44 or later. The icons come from a copy of the tabler-icons main
+  branch taken on 2026-06-30; the exact release was not recorded. 3.44 is the highest
+  release named in that copy's per-icon metadata.

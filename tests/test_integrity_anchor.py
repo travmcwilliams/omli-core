@@ -30,7 +30,8 @@ def test_anchor_appends_and_is_idempotent_per_head(tmp_path):
     assert again == first                            # no duplicate line
     assert len(read_anchor(anchor)) == 1
 
-    log.open("a", encoding="utf-8").write(json.dumps({"x": "delta"}) + "\n")
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"x": "delta"}) + "\n")
     second = anchor_head(seal(log), anchor)
     entries = read_anchor(anchor)
     assert len(entries) == 2
@@ -47,7 +48,8 @@ def test_verify_anchor_statuses(tmp_path):
     assert verify_anchor(s1.head, anchor).status == "anchored"
     assert verify_anchor(s1.head, anchor).trustworthy
 
-    log.open("a", encoding="utf-8").write(json.dumps({"x": "delta"}) + "\n")
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"x": "delta"}) + "\n")
     s2 = seal(log)
     anchor_head(s2, anchor)
     assert verify_anchor(s2.head, anchor).status == "anchored"

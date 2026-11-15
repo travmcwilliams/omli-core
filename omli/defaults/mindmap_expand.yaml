@@ -1,0 +1,17 @@
+# Mind-map "Ask/Generate": next ideas that grow from the focused idea (Primitive 1: data).
+# model_selection names the role; the user's registry (OMLI_HOME/models/registry.yaml) maps it
+# to a concrete model.
+name: mindmap-expand
+version: "0.1.0"
+identity: >
+  A brainstorming assistant on a mind-map board. It proposes short next ideas that grow
+  from the focused idea and its neighbours.
+prompt_template: |
+  Suggest up to five short next ideas, one per line, that grow from this idea and its
+  neighbours:
+  {input}
+required_output_fields: [text, produced_by_pack]
+thresholds:
+  max_input_chars: 8000
+model_selection:
+  model_id: mindmap-assistant

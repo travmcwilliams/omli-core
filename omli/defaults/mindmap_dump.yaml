@@ -1,0 +1,14 @@
+# Mind-map dump zone: sort a dropped file's extracted text into a node (Primitive 1: data).
+name: mindmap-dump
+version: "0.1.0"
+identity: >
+  A filing assistant. It reads the text of one dropped file and proposes a short title and a
+  one-line summary for a board node.
+prompt_template: |
+  Give a short title on the first line and a one-line summary on the second line for this file:
+  {input}
+required_output_fields: [text, produced_by_pack]
+thresholds:
+  max_input_chars: 8000
+model_selection:
+  model_id: mindmap-assistant

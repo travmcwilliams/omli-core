@@ -1,0 +1,108 @@
+# Mind-map vocabulary: data, not code (Primitive 1). Read by omli.boards; never written.
+# Changing it is a new version of this file.
+name: mindmap
+version: "0.2.0"
+
+# Glosses the board shows for a link's relation.
+relations:
+  relates: is related to
+  flow: feeds into
+  supports: supports
+  contradicts: contradicts
+  part_of: is part of
+
+# Node icons: the first rule whose keyword appears in a node's text names the icon; otherwise
+# the board draws a procedural seed with one of these forms.
+icons:
+  rules:
+    - {icon: database, keywords: [data, database, dataset, table, storage]}
+    - {icon: shield-lock, keywords: [security, secure, login, key, privacy]}
+    - {icon: bulb, keywords: [idea, insight, concept]}
+    - {icon: target, keywords: [goal, objective, aim]}
+    - {icon: alert-triangle, keywords: [risk, issue, problem, threat]}
+    - {icon: question-mark, keywords: [question, unknown]}
+    - {icon: users, keywords: [user, users, people, team]}
+    - {icon: chart-line, keywords: [metric, measure, trend, chart]}
+    - {icon: file-text, keywords: [document, note, notes, file, report]}
+    - {icon: cpu, keywords: [model, inference, compute]}
+  forms: [orbit, petal, sigil, lattice, burst]
+
+# Dropped files: turned into text by deterministic code before any model sees them.
+dump:
+  max_bytes: 5000000
+  max_chars: 4000
+  max_rows: 30
+  # extension -> reader. Anything else is refused. pdf, docx and xlsx need the files extra.
+  file_types:
+    txt: text
+    text: text
+    md: text
+    markdown: text
+    log: text
+    csv: csv
+    tsv: csv
+    json: json
+    pdf: pdf
+    docx: docx
+    xlsx: xlsx
+  entity_types: [Document, Dataset, Note, Image, Code, Other]
+  status: [draft, review, final]
+  tags: [idea, reference, evidence, todo]
+  editable: [title, summary, entity_type, tags, status]
+
+# Retrieval over the user's project folders.
+retrieval:
+  k: 5
+  # Per request, across all its sources: the walk examines no more than max_dirs folders and
+  # looks at no more than max_files files, and enters a folder only when its real path is no
+  # more than max_depth folders below the source.
+  max_files: 2000
+  max_dirs: 5000
+  max_depth: 24
+  max_file_bytes: 200000
+  snippet_chars: 400
+  skip_dirs: [.git, .hg, .svn, node_modules, __pycache__, .venv, venv, .tox]
+  text_types: [txt, md, markdown, rst, py, js, ts, json, yaml, yml, toml, csv, html, css]
+  # Never read or sent to a model: any folder or file whose name starts with "." ...
+  skip_hidden: true
+  # ... and any file whose name matches one of these patterns (case-insensitive): environment
+  # files, keys and certificates, key and password stores, and credential or secret files.
+  skip_names:
+    - .env
+    - .env.*
+    - "*.env"
+    - "*.env.*"
+    - "*.pem"
+    - "*.pem.*"
+    - "*.key"
+    - "*.crt"
+    - "*.cer"
+    - "*.der"
+    - "*.p12"
+    - "*.pfx"
+    - "*.jks"
+    - "*.keystore"
+    - "*.kdbx"
+    - id_rsa*
+    - id_dsa*
+    - id_ecdsa*
+    - id_ed25519*
+    - credentials
+    - "*credentials*"
+    - "*secret*"
+    - .git-credentials
+    - .netrc
+    - .npmrc
+    - .pypirc
+
+# The offline auto-design questions and the starter board it builds.
+autodesign:
+  questions:
+    - id: goal
+      text: "What is this board for?"
+    - id: parts
+      text: "Name the main parts, separated by commas."
+    - id: risks
+      text: "What could go wrong? Separate them with commas."
+    - id: next
+      text: "What is the first step?"

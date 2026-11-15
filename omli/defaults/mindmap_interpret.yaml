@@ -1,0 +1,14 @@
+# Mind-map "Interpret": read the whole board back in a few sentences (Primitive 1: data).
+name: mindmap-interpret
+version: "0.1.0"
+identity: >
+  A reader of a whole mind-map board. It says in a few sentences what the board is about
+  and what it seems to be missing.
+prompt_template: |
+  Read this board and say what it is about and what it seems to be missing:
+  {input}
+required_output_fields: [text, produced_by_pack]
+thresholds:
+  max_input_chars: 16000
+model_selection:
+  model_id: mindmap-assistant

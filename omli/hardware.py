@@ -22,16 +22,18 @@ would corrupt the number the telemetry exists to explain.
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import time
 from typing import Optional
+
+from omli.programs import find_program, run_program
 
 #: Seconds a probe result stays fresh: calls within this window (for example a burst of
 #: retries) share one reading.
 GPU_TTL_S = 2.0
 
-_SMI: Optional[str] = shutil.which("nvidia-smi")
+# Only from an absolute PATH folder, never the current folder (see omli.programs).
+_SMI: Optional[str] = find_program("nvidia-smi")
 _cache: dict = {"t": None, "value": None}
 
 _DISABLED_VALUES = {"0", "off", "false", "no"}
@@ -51,7 +53,7 @@ def probe_gpu() -> Optional[dict]:
     if not _SMI or not telemetry_enabled():
         return None
     try:
-        result = subprocess.run(
+        result = run_program(
             [
                 _SMI,
                 "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu",

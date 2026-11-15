@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OMLi Mind Map</title>
+<link rel="icon" href="data:,"/>
+<link rel="stylesheet" href="/mindmap/mindmap.css"/>
+</head>
+<body>
+<div id="top">
+  <h1><b>OMLi</b> Mind Map</h1>
+  <input id="ideaIn" placeholder="Type an idea, press Enter…"/>
+  <button class="btn" id="btnDesign" title="A few questions, then a starter board (offline)">✨ Design</button>
+  <span class="sp"></span>
+  <input id="mapName" value="Untitled map"/>
+  <input id="runQ" placeholder="Retrieval query…" title="Query to run the ladder with"/>
+  <button class="btn warnbtn" id="btnValidate" title="Check the RAG ladder">Validate</button>
+  <button class="btn primary" id="btnRun" title="Run the retrieval ladder">Run ▷</button>
+  <button class="btn" id="btnLoad">Load</button>
+  <button class="btn primary" id="btnSave">Save</button>
+  <button class="btn" id="btnHome" title="Your project list">← Home</button>
+  <span class="userchip" id="userchip"></span>
+</div>
+
+<div id="stage">
+  <div id="world">
+    <svg id="edges"></svg>
+  </div>
+</div>
+
+<div id="pop"></div>
+<div id="rel"></div>
+<!-- node action sidebar: opens on a single click (move is press-and-hold) -->
+<div id="nodebar">
+  <header><span class="nbt" id="nbTitle"></span><span class="x" id="nbClose">×</span></header>
+  <div class="acts" id="nbActs"></div>
+</div>
+<!-- lower-right procedural "thinking" bubble: the model's work bubbles up here -->
+<div id="think">
+  <div class="thead"><span id="thinkTitle">Thinking</span><span class="sp"></span>
+    <span class="x" id="thinkClose">×</span></div>
+  <div class="tbody" id="thinkBody"></div>
+</div>
+<div id="hint">Type an idea → Enter · drop/paste <b>any file</b> to classify + tag it · drag a shape corner to resize · <b>drag empty canvas to select</b> (Space = pan) · Ctrl+G groups · <b>Frames</b> tool draws regions · <b>▤ RAG rungs</b> · <b>Run ▷</b> executes the ladder</div>
+
+<div id="stampEd"><div class="card">
+  <h3 id="seTitle">Entity stamp</h3>
+  <div class="sub" id="seSub"></div>
+  <div id="seFields"></div>
+  <div class="btns">
+    <button id="seCancel">Cancel</button>
+    <button id="seSave" class="pri">Save stamp</button>
+  </div>
+</div></div>
+<div id="modelLine" class="modelline" style="display:none"></div>
+<div id="reading">
+  <div class="rhead"><span>Board reading</span><span class="rspin"></span>
+    <span class="sp"></span><button class="rtoggle" id="btnRead" title="Save, then ask the model to read the board">Read</button><button class="rtoggle" id="rToggle" title="Collapse / expand">▾</button></div>
+  <div class="rbody" id="rBody">
+    <div class="rempty">Press Read to have your model read the saved board. It never changes the board.</div>
+  </div>
+</div>
+
+<!-- Self-contained animated-effect filters (no CDN): electric arc = Perlin
+     turbulence displacing the element; fire = same, warmer + coarser. baseFrequency
+     is animated so the distortion flows like a real arc. Scoped to running rungs. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="electric" x="-30%" y="-30%" width="160%" height="160%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="2" seed="7" result="n">
+      <animate attributeName="baseFrequency" dur="0.9s" values="0.02 0.06;0.05 0.09;0.02 0.06" repeatCount="indefinite"/>
+    </feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="fireGlow" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9 0.4" numOctaves="2" seed="3" result="n">
+      <animate attributeName="baseFrequency" dur="1.3s" values="0.9 0.4;0.7 0.6;0.9 0.4" repeatCount="indefinite"/>
+    </feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+  </filter>
+</defs></svg>
+
+<!-- rung property inspector -->
+<div id="inspector"></div>
+<!-- color / style popover -->
+<div id="colorpop"></div>
+<!-- frame properties popover (right-click a frame) -->
+<div id="framepop"></div>
+<!-- canvas background panel (anchored graphic revealed through shapes) -->
+<div id="bgpanel"></div>
+<!-- RAG rung palette flyout -->
+<div id="ragmenu"></div>
+<div id="hist"></div>
+<!-- run-results drawer -->
+<div id="runOut"><header>RAG run <span class="sp"></span>
+  <span class="src" id="runSrc"></span>
+  <button class="btn" id="runClose">Close</button></header>
+  <div class="body" id="runBody"></div>
+</div>
+
+<!-- starter-board designer: offline questions -->
+<div id="designer">
+  <header>✨ Design a starter board <span class="sp"></span><span class="x" id="ivClose">×</span></header>
+  <div id="ivBody"></div>
+  <div id="ivFoot"><input id="ivIn" placeholder="Type your answer…"/>
+    <button class="btn primary" id="ivSend">Send</button></div>
+</div>
+<div id="toolbar">
+  <span class="grip" id="tbGrip" title="Drag toolbar">⠿</span>
+  <button class="tool active" id="tSelect" data-tip="Select / move (V)">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l15 8.4-6.6 1.2-3.3 6.2z"/></svg></button>
+  <button class="tool" id="tText" data-tip="Text (T)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6h14M12 6v12M9 18h6"/></svg></button>
+  <button class="tool" id="tNote" data-tip="Sticky note (N)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h6l9-9-6-6-9 9z"/><path d="M13 4l6 6"/></svg></button>
+  <button class="tool" id="tShape" data-tip="Shape (S) — click to cycle rect/ellipse/diamond">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="2"/></svg></button>
+  <button class="tool" id="tLink" data-tip="Connect ideas — typed relation (L)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.6"/><circle cx="18" cy="6" r="2.6"/><path d="M8 16L16 8"/></svg></button>
+  <button class="tool" id="tShapes" data-tip="Shapes — drag to size (S)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3.5" width="8" height="8" rx="1"/><circle cx="17" cy="7.5" r="4"/><path d="M7.5 14l4.5 7.5h-9z"/></svg></button>
+  <button class="tool" id="tFlow" data-tip="Flow arrow — RAG dataflow (F)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h13"/><path d="M13 7l5 5-5 5"/></svg></button>
+  <button class="tool" id="tRag" data-tip="Add RAG rung ▾">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="4" rx="1"/><rect x="4" y="10" width="16" height="4" rx="1"/><rect x="4" y="17" width="16" height="4" rx="1"/></svg></button>
+  <span class="tdiv"></span>
+  <button class="tool" id="tColor" data-tip="Color / style">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.5 0-1.6 1.3-2.5 2.5-2.5H18a3 3 0 0 0 3-3 8 8 0 0 0-9-8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="11" r="1"/></svg></button>
+  <button class="tool" id="tBg" data-tip="Frames &amp; canvas — draw regions, cycle, set tint">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="13" height="10" rx="1.5"/><rect x="9" y="11" width="12" height="9" rx="1.5"/></svg></button>
+  <button class="tool" id="tDup" data-tip="Duplicate (Ctrl+D)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+  <button class="tool" id="tAlign" data-tip="Align / distribute selected">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4v16"/><rect x="8" y="7" width="9" height="3.4" rx="1"/><rect x="8" y="13.6" width="6" height="3.4" rx="1"/></svg></button>
+  <button class="tool" id="tGroup" data-tip="Group / ungroup selected (Ctrl+G)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/></svg></button>
+  <span class="tdiv"></span>
+  <button class="tool" id="tUndo" data-tip="Undo (Ctrl+Z)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8L3 12l5 4"/><path d="M3 12h11a6 6 0 0 1 0 12h-2"/></svg></button>
+  <button class="tool" id="tRedo" data-tip="Redo (Ctrl+Y)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8l5 4-5 4"/><path d="M21 12H10a6 6 0 0 0 0 12h2"/></svg></button>
+  <button class="tool" id="tDel" data-tip="Delete selected (Del)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+  <button class="tool" id="tHist" data-tip="Checkpoints: record the board, or restore an earlier one">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg></button>
+  <span class="tdiv"></span>
+  <button class="tool" id="tZoomOut" data-tip="Zoom out">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+  <span class="zlabel" id="zLabel" data-tip="Reset to 100%">100%</span>
+  <button class="tool" id="tZoomIn" data-tip="Zoom in">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="tool" id="tCore" data-tip="Open the starter board: how OMLi works">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="5" height="4" rx="1"/><rect x="9.5" y="3" width="5" height="4" rx="1"/><rect x="16" y="3" width="5" height="4" rx="1"/><rect x="3" y="9" width="18" height="4" rx="1"/><path d="M4 17h4M10 17h4M16 17h4"/></svg></button>
+  <button class="tool" id="tFit" data-tip="Fit to view">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div>
+<div id="toast"></div>
+<div id="rubber"></div>
+<div id="marquee"></div>
+<div id="shapePalette">
+  <h4>Flowchart</h4><div class="grid" id="shGridFlow"></div>
+  <h4>Architecture</h4><div class="grid" id="shGridArch"></div>
+</div>
+<script type="module" src="/mindmap/mindmap.js"></script>
+</body>
+</html>

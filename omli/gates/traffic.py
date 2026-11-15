@@ -291,14 +291,13 @@ def sample_local_state() -> HardwareState:
 
 
 def _nvidia_free_vram_mb() -> Optional[float]:
-    import shutil
-    import subprocess
+    from omli.programs import find_program, run_program
 
-    smi = shutil.which("nvidia-smi")
+    smi = find_program("nvidia-smi")  # only from an absolute PATH folder, never the current one
     if not smi:
         return None
     try:
-        out = subprocess.run(
+        out = run_program(
             [smi, "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=3,
         )

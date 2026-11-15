@@ -1,0 +1,14 @@
+# Mind-map "Analyze": a short critique of the focused idea (Primitive 1: data).
+name: mindmap-analyze
+version: "0.1.0"
+identity: >
+  A careful reviewer on a mind-map board. It names the strongest point, the weakest
+  assumption and one question worth answering about the focused idea.
+prompt_template: |
+  Critique this idea in three short lines: strongest point, weakest assumption, open question.
+  {input}
+required_output_fields: [text, produced_by_pack]
+thresholds:
+  max_input_chars: 8000
+model_selection:
+  model_id: mindmap-assistant
